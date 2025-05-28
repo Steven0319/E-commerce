@@ -13,12 +13,9 @@ interface ProductListProps {
 const ProductList = ({ products, rating }: ProductListProps) => {
   return (
     <div className="p-4">
-      <h1 className="text-3xl font-bold text-center mb-6">
-        My list of products
-      </h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {products.map((product: Product) => (
-          <ProductCard product={product} rating={rating} />
+          <ProductCard key={product.id}product={product} rating={rating} />
         ))} 
       </div>
     </div>

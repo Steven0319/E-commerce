@@ -12,11 +12,11 @@ interface ProductCardProps {
 
 const ProductsCard = ({ product, rating }: ProductCardProps) => {
   return (
-    <div className="border p-4 rounded-lg shadow-xl bg-gray-200">
+    <div className="border p-4 rounded-lg shadow-xl bg-gray-200 h-full flex flex-col">
       <img
         src={product.image}
         alt={product.title}
-        className="w-full h-45 object-cover rounded-lg mb-4"
+        className="w-full h-40 object-contain rounded-lg mb-4"
       />
      <h2 className="text-xl font-semibold text-blue-900 hover:underline">{product.title}</h2>
      <p>
