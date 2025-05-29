@@ -1,45 +1,56 @@
-import {useState, useEffect, useRef, useMemo} from 'react'
+import {useState, useEffect, useRef, useMemo, useReducer} from 'react'
 import './App.css'
 import axios from 'axios';
 import ProductList from './components/ProductList';
 import { MdErrorOutline } from "react-icons/md";
+import type { Product } from './helpers/Interfaces';
+import type { FetchState } from './helpers/Interfaces';
 
-export interface rating {
-  rate: number;
-  count: number;
+
+
+const initialState: FetchState = {
+  data: [],
+  loading: true,
+  error: null,
+};
+
+type FetchAction =
+  | { type: "FETCH_INIT" }
+  | { type: "FETCH_SUCCESS"; payload: Product[] }
+  | { type: "FETCH_FAILURE"; payload: string };
+
+function fetchReducer(state: FetchState, action: FetchAction): FetchState {
+  console.log("Dispatching", action.type); //para debugear
+  switch (action.type) {
+    case "FETCH_INIT":
+      return { ...state, loading: true, error: null };
+    case "FETCH_SUCCESS":
+      return { ...state, loading: false, data: action.payload };
+    case "FETCH_FAILURE":
+      return { ...state, loading: false, error: action.payload };
+    default:
+      return state;
+  }
 }
-export interface Product {
-  id: number;
-  title: string;
-  price: number;
-  description: string;
-  category: string;
-  image: string;
-  rating: rating;
-}
+
 function App() {
-  const [product, setProduct] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(fetchReducer, initialState);
   const [searchTerm, setSearchTerm] = useState<string>(""); //estado para la busqueda
   const searchInputRef = useRef<HTMLInputElement>(null); //ref para el input
 
   useEffect(() => {
     const fetchProducts = async (): Promise<void> => {
+      dispatch({ type: "FETCH_INIT" }); //Iniciar carga
       try {
         const response = await axios.get<Product[]>(
           "https://fakestoreapi.com/products"
         );
-        setProduct(response.data);
+        dispatch({ type: "FETCH_SUCCESS", payload: response.data }); // Éxito
       } catch (error) {
-        if (error instanceof Error) {
-          setError(error.message);
-        } else {
-          setError("an error occurred");
-        }
-        console.log("an error occurred");
-      }finally {
-        setLoading(false);
+        const message =
+          error instanceof Error ? error.message : "Hubo un error";
+        dispatch({ type: "FETCH_FAILURE", payload: message }); // Fallo
+        console.log("error al consultar los productos");
       }
     };
     fetchProducts();
@@ -47,20 +58,20 @@ function App() {
 
     useEffect(() => {
     searchInputRef.current?.focus();
-  }, [loading]);
+  }, [state.loading]);
 
  const filteredProducts = useMemo(() => {
   const lowerSearchTerm = searchTerm.toLowerCase();
-  return product.filter((item) =>
+  return state.data.filter((item) =>
     item.title.toLowerCase().startsWith(lowerSearchTerm) ||
     item.category.toLowerCase().startsWith(lowerSearchTerm) ||
     item.description.toLowerCase().startsWith(lowerSearchTerm) ||
     item.price.toString().toLowerCase().startsWith(lowerSearchTerm) ||
     item.rating.rate.toString().toLowerCase().startsWith(lowerSearchTerm)
   );
-}, [product, searchTerm]);
+}, [state.data, searchTerm]);
 
-  if (loading) {
+  if (state.loading) {
     return (
         <div className="flex flex-col justify-center">
           <h2>Loading....</h2>
@@ -69,7 +80,7 @@ function App() {
     );
   }
 
-  if (error) {
+  if (state.error) {
     return (
       <p>
         <span className="text-red-500">

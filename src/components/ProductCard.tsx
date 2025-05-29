@@ -1,4 +1,4 @@
-import type { Product } from "../App";
+import type { Product } from "../helpers/Interfaces";
 
 interface Rating {
   rate: number;
