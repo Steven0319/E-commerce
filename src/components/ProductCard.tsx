@@ -1,38 +1,55 @@
+import { useContext } from "react";
 import type { Product } from "../helpers/Interfaces";
-
-interface Rating {
-  rate: number;
-  count: number;
-}
+import { SelectedProductsContext } from "../context/SelectedProductsContext";
 
 interface ProductCardProps {
   product: Product;
-  rating: Rating;
 }
 
-const ProductsCard = ({ product, rating }: ProductCardProps) => {
+const ProductsCard = ({ product }: ProductCardProps) => {
+  const context = useContext(SelectedProductsContext);
+
+  if (!context) {
+    throw new Error(
+      "ProductsCard debe estar dentro de un SelectedProductsProvider"
+    );
+  }
+
+  const { addSelectedProduct } = context;
+
   return (
-    <div className="border p-4 rounded-lg shadow-xl bg-gray-200 h-full flex flex-col">
+    <div className="border p-4 rounded-lg shadow-xl bg-gray-100 h-full flex flex-col">
       <img
         src={product.image}
         alt={product.title}
         className="w-full h-40 object-contain rounded-lg mb-4"
       />
-     <h2 className="text-xl font-semibold text-blue-900 hover:underline">{product.title}</h2>
-     <p>
-      <strong>Rating:</strong> {rating.rate} ({rating.count} reviews)
-     </p>
-      <p className="text-gray-600">
+      <h2 className="text-lg font-semibold text-blue-900 hover:underline mb-1">
+        {product.title}
+      </h2>
+      <p className="text-gray-700 text-sm mb-1">
         <strong>Category:</strong> {product.category}
       </p>
-      <p className="text-gray-800">
+      <p className="text-gray-900 font-bold mb-2">
         <strong>Price:</strong> ${product.price}
       </p>
-     <p className="text-gray-700 text-left text-sm">
-        <strong>Description:</strong> {product.description}
+      <p className="text-gray-700 text-sm mb-3">
+        {product.description.slice(0, 100)}...
       </p>
+      {product.rating && (
+        <p className="text-sm text-gray-600 mb-3">
+          ⭐ <strong>{product.rating.rate}</strong> ({product.rating.count}{" "}
+          reviews)
+        </p>
+      )}
+      <button
+        onClick={() => addSelectedProduct(product)}
+        className="mt-auto bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+      >
+        Add to Cart
+      </button>
     </div>
   );
-}
+};
 
-export default ProductsCard
+export default ProductsCard;
