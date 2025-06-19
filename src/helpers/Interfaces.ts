@@ -10,9 +10,10 @@ export interface Product {
   category: string;
   image: string;
   rating: rating;
+  originalTitle?: string; 
 }
 
-export interface FetchState{
+export interface FetchState {
   data: Product[];
   loading: boolean;
   error: string | null;

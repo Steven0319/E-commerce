@@ -1,4 +1,5 @@
-import { createContext, useState } from "react";
+import { createContext, useReducer, useEffect } from "react";
+import type { ReactNode } from "react";
 import type { Product } from "../helpers/Interfaces";
 
 export interface SelectedProductEntry {
@@ -6,84 +7,90 @@ export interface SelectedProductEntry {
   count: number;
 }
 
-interface SelectedProductsContextType {
+interface State {
+  selectedProducts: SelectedProductEntry[];
+}
+
+type Action =
+  | { type: "ADD_PRODUCT"; payload: Product }
+  | { type: "REMOVE_PRODUCT"; payload: number }
+  | { type: "CLEAR_ALL" }
+  | { type: "LOAD_FROM_STORAGE"; payload: SelectedProductEntry[] };
+
+const initialState: State = {
+  selectedProducts: [],
+};
+
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_PRODUCT": {
+      const existing = state.selectedProducts.find(p => p.product.id === action.payload.id);
+      if (existing) {
+        return {
+          ...state,
+          selectedProducts: state.selectedProducts.map(p =>
+            p.product.id === action.payload.id
+              ? { ...p, count: p.count + 1 }
+              : p
+          ),
+        };
+      }
+      return {
+        ...state,
+        selectedProducts: [...state.selectedProducts, { product: action.payload, count: 1 }],
+      };
+    }
+    case "REMOVE_PRODUCT":
+      return {
+        ...state,
+        selectedProducts: state.selectedProducts.filter(p => p.product.id !== action.payload),
+      };
+    case "CLEAR_ALL":
+      return { ...state, selectedProducts: [] };
+    case "LOAD_FROM_STORAGE":
+      return { ...state, selectedProducts: action.payload };
+    default:
+      return state;
+  }
+};
+
+export const SelectedProductsContext = createContext<{
   selectedProducts: SelectedProductEntry[];
   addSelectedProduct: (product: Product) => void;
   removeSelectedProduct: (productId: number) => void;
-  clearProductSelections: (productId: number) => void;
-}
+  clearAllSelections: () => void;
+} | null>(null);
 
-export const SelectedProductsContext = createContext<
-  SelectedProductsContextType | undefined
->(undefined);
+export const SelectedProductsProvider = ({ children }: { children: ReactNode }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-export function SelectedProductsProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [selectedProducts, setSelectedProducts] = useState<
-    SelectedProductEntry[]
-  >([]);
+  // Cargar desde localStorage al iniciar
+  useEffect(() => {
+    const stored = localStorage.getItem("selectedProducts");
+    if (stored) {
+      dispatch({ type: "LOAD_FROM_STORAGE", payload: JSON.parse(stored) });
+    }
+  }, []);
 
-  const addSelectedProduct = (productToAdd: Product) => {
-    setSelectedProducts((prevSelectedProducts) => {
-      const existingProductEntry = prevSelectedProducts.find(
-        (entry) => entry.product.id === productToAdd.id
-      );
+  // Guardar en localStorage cada vez que cambie
+  useEffect(() => {
+    localStorage.setItem("selectedProducts", JSON.stringify(state.selectedProducts));
+  }, [state.selectedProducts]);
 
-      if (existingProductEntry) {
-        return prevSelectedProducts.map((entry) =>
-          entry.product.id === productToAdd.id
-            ? { ...entry, count: entry.count + 1 }
-            : entry
-        );
-      } else {
-        return [...prevSelectedProducts, { product: productToAdd, count: 1 }];
-      }
-    });
-  };
-
-  const removeSelectedProduct = (productIdToRemove: number) => {
-    setSelectedProducts((prevSelectedProducts) => {
-      const existingProductEntry = prevSelectedProducts.find(
-        (entry) => entry.product.id === productIdToRemove
-      );
-
-      if (!existingProductEntry) return prevSelectedProducts;
-
-      if (existingProductEntry.count > 1) {
-        return prevSelectedProducts.map((entry) =>
-          entry.product.id === productIdToRemove
-            ? { ...entry, count: entry.count - 1 }
-            : entry
-        );
-      } else {
-        return prevSelectedProducts.filter(
-          (entry) => entry.product.id !== productIdToRemove
-        );
-      }
-    });
-  };
-
-  const clearProductSelections = (productIdToClear: number) => {
-    setSelectedProducts((prevSelectedProducts) =>
-      prevSelectedProducts.filter(
-        (entry) => entry.product.id !== productIdToClear
-      )
-    );
-  };
-
-  const value = {
-    selectedProducts,
-    addSelectedProduct,
-    removeSelectedProduct,
-    clearProductSelections,
-  };
+  const addSelectedProduct = (product: Product) => dispatch({ type: "ADD_PRODUCT", payload: product });
+  const removeSelectedProduct = (productId: number) => dispatch({ type: "REMOVE_PRODUCT", payload: productId });
+  const clearAllSelections = () => dispatch({ type: "CLEAR_ALL" });
 
   return (
-    <SelectedProductsContext.Provider value={value}>
+    <SelectedProductsContext.Provider
+      value={{
+        selectedProducts: state.selectedProducts,
+        addSelectedProduct,
+        removeSelectedProduct,
+        clearAllSelections,
+      }}
+    >
       {children}
     </SelectedProductsContext.Provider>
   );
-}
+};
